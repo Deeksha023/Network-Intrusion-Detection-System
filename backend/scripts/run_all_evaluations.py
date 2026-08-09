@@ -18,12 +18,18 @@ from scripts.train_classifier import LABEL_VARIANTS
 from ml.anomaly_detector import PyTorchAutoencoder, AutoencoderDetector
 
 def main():
+    import sys, io
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     print("=" * 70)
     print("IDS Pipeline Complete Analysis: Stage 1 Confusion Matrix & Stage 2 Anomaly Test")
     print("=" * 70)
 
-    data_path = "data/cicids2017"
-    artifacts_dir = "ml/artifacts"
+
+    data_path = os.path.join(Path(__file__).resolve().parent.parent.parent, "data", "cicids2017")
+    artifacts_dir = os.path.join(Path(__file__).resolve().parent.parent, "ml", "artifacts")
+
 
     # 1. Verify Autoencoder Threshold & Stats
     thresh_file = os.path.join(artifacts_dir, "autoencoder_threshold.json")
@@ -72,51 +78,120 @@ def main():
     y_pred = clf.predict(X_test_scaled)
     classes = list(encoder.classes_)
 
-    # 3. Print Confusion Matrix
+    # 3. Compute Binary & Multi-class Evaluation Metrics
+    benign_idx = classes.index("BENIGN") if "BENIGN" in classes else 0
+    y_test_binary = (y_test != benign_idx).astype(int)
+    y_pred_binary = (y_pred != benign_idx).astype(int)
+
+    tp_bin = int(np.sum((y_test_binary == 1) & (y_pred_binary == 1)))
+    tn_bin = int(np.sum((y_test_binary == 0) & (y_pred_binary == 0)))
+    fp_bin = int(np.sum((y_test_binary == 0) & (y_pred_binary == 1)))
+    fn_bin = int(np.sum((y_test_binary == 1) & (y_pred_binary == 0)))
+
+    total_test = len(y_test)
+    benign_samples = int(np.sum(y_test_binary == 0))
+    attack_samples = int(np.sum(y_test_binary == 1))
+
+    accuracy = float((tp_bin + tn_bin) / total_test)
+    precision = float(tp_bin / (tp_bin + fp_bin)) if (tp_bin + fp_bin) > 0 else 0.0
+    recall = float(tp_bin / (tp_bin + fn_bin)) if (tp_bin + fn_bin) > 0 else 0.0
+    specificity = float(tn_bin / (tn_bin + fp_bin)) if (tn_bin + fp_bin) > 0 else 0.0
+    f1_score = float(2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    fpr = float(fp_bin / (fp_bin + tn_bin)) if (fp_bin + tn_bin) > 0 else 0.0
+    fnr = float(fn_bin / (fn_bin + tp_bin)) if (fn_bin + tp_bin) > 0 else 0.0
+    balanced_acc = float((recall + specificity) / 2.0)
+
     print("\n" + "=" * 70)
-    print("Stage 1 Confusion Matrix (Rows = True Class, Cols = Predicted Class)")
+    print("OFFLINE MODEL EVALUATION (HELD-OUT TEST SET RESULTS)")
+    print("=" * 70)
+    print(f"  Evaluation Source       : OFFLINE HELD-OUT TEST SET (NOT live alerts)")
+    print(f"  Dataset                 : CICIDS2017")
+    print(f"  Train / Test Split      : 80% Train / 20% Test")
+    print(f"  Features Used           : {len(FEATURE_NAMES)}")
+    print(f"  Total Test Samples      : {total_test:,}")
+    print(f"  Benign Samples          : {benign_samples:,}")
+    print(f"  Attack Samples          : {attack_samples:,}")
+    print(f"  Number of Attack Classes: {len(classes) - 1}")
+    print("-" * 70)
+    print(f"  Accuracy                : {accuracy:.4f} ({accuracy * 100:.2f}%)")
+    print(f"  Precision               : {precision:.4f} ({precision * 100:.2f}%)")
+    print(f"  Recall (Sensitivity)    : {recall:.4f} ({recall * 100:.2f}%)")
+    print(f"  F1-Score                : {f1_score:.4f} ({f1_score * 100:.2f}%)")
+    print(f"  Specificity             : {specificity:.4f} ({specificity * 100:.2f}%)")
+    print(f"  False Positive Rate     : {fpr:.4f} ({fpr * 100:.2f}%)")
+    print(f"  False Negative Rate     : {fnr:.4f} ({fnr * 100:.2f}%)")
+    print(f"  Balanced Accuracy       : {balanced_acc:.4f} ({balanced_acc * 100:.2f}%)")
+    print("-" * 70)
+    print("  Binary Confusion Matrix:")
+    print(f"    TP: {tp_bin:<12} FP: {fp_bin:<12}")
+    print(f"    FN: {fn_bin:<12} TN: {tn_bin:<12}")
+
+
+    # 4. Print Multi-class Confusion Matrix
+    print("\n" + "=" * 70)
+    print("Stage 1 Multi-class Confusion Matrix (Rows = True, Cols = Pred)")
     print("=" * 70)
     cm = confusion_matrix(y_test, y_pred)
     cm_df = pd.DataFrame(cm, index=classes, columns=classes)
     print(cm_df.to_string())
 
-    # 4. Detailed XSS Misclassification Analysis
-    if "Web Attack - XSS" in classes:
-        xss_idx = classes.index("Web Attack - XSS")
-        xss_mask = (y_test == xss_idx)
-        xss_preds = pd.Series(y_pred[xss_mask]).value_counts()
-        total_xss = xss_mask.sum()
+    # 5. Export Offline Evaluation JSON
+    offline_metrics = {
+        "evaluation_type": "OFFLINE MODEL EVALUATION",
+        "dataset": "CICIDS2017",
+        "train_test_split": "80% Train / 20% Test",
+        "total_test_samples": total_test,
+        "benign_samples": benign_samples,
+        "attack_samples": attack_samples,
+        "num_attack_classes": len(classes) - 1,
+        "num_features": len(FEATURE_NAMES),
+        "features": FEATURE_NAMES,
+        "confusion_matrix": {
+            "tp": tp_bin,
+            "tn": tn_bin,
+            "fp": fp_bin,
+            "fn": fn_bin,
+            "total_evaluated": total_test,
+        },
+        "metrics": {
+            "accuracy": round(accuracy, 4),
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1_score": round(f1_score, 4),
+            "specificity": round(specificity, 4),
+            "false_positive_rate": round(fpr, 4),
+            "false_negative_rate": round(fnr, 4),
+            "balanced_accuracy": round(balanced_acc, 4),
+        },
+        "classes": classes,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
 
-        print("\n" + "=" * 70)
-        print(f"Breakdown of 'Web Attack - XSS' Predictions (Total True Samples: {total_xss}):")
-        print("=" * 70)
-        for pred_idx, count in xss_preds.items():
-            pred_label = classes[pred_idx]
-            pct = 100.0 * count / total_xss
-            print(f"  -> Predicted as '{pred_label:<25}': {count:>4d} ({pct:6.2f}%)")
+    eval_out_path = os.path.join(artifacts_dir, "offline_evaluation.json")
+    with open(eval_out_path, "w") as f:
+        json.dump(offline_metrics, f, indent=2)
+    print(f"\n[✓] Exported offline evaluation metrics → {eval_out_path}")
 
-    # 5. Test Weak Classes (Bot, Infiltration, XSS) through Stage 2 PyTorch Autoencoder
+    # 6. Test Weak Classes (Bot, Infiltration, XSS) through Stage 2 PyTorch Autoencoder
     pt_model_path = os.path.join(artifacts_dir, "autoencoder.pt")
     if os.path.exists(pt_model_path):
         print("\n" + "=" * 70)
         print("Stage 2 PyTorch Autoencoder Anomaly Detection on Stage 1 False BENIGN Samples")
         print("=" * 70)
 
-        threshold = thresh_data.get("threshold", 0.02041140) if 'thresh_data' in locals() else 0.02041140
+        threshold = thresh_data.get("threshold", 0.04165823) if 'thresh_data' in locals() else 0.04165823
         detector = AutoencoderDetector(model_path=pt_model_path, threshold=threshold)
         detector.load()
 
-        benign_idx = classes.index("BENIGN") if "BENIGN" in classes else 0
         weak_classes = ["Bot", "Infiltration", "Web Attack - XSS"]
 
         for target_cls in weak_classes:
             if target_cls not in classes:
                 continue
             cls_idx = classes.index(target_cls)
-            # Find samples of target_cls that Stage 1 misclassified as BENIGN
             missed_mask = (y_test == cls_idx) & (y_pred == benign_idx)
-            n_missed = missed_mask.sum()
-            total_cls = (y_test == cls_idx).sum()
+            n_missed = int(missed_mask.sum())
+            total_cls = int((y_test == cls_idx).sum())
 
             print(f"\nTarget Class: '{target_cls}'")
             print(f"  Total test samples          : {total_cls}")
@@ -133,21 +208,17 @@ def main():
                     if is_anom:
                         flagged_anomalies += 1
 
-                mean_mse = np.mean(errors)
-                pct_flagged = 100.0 * flagged_anomalies / n_missed
+                mean_mse = float(np.mean(errors))
+                pct_flagged = float(100.0 * flagged_anomalies / n_missed)
                 print(f"  Stage 2 Reconstruction Error Mean : {mean_mse:.8f} (Threshold = {threshold:.8f})")
                 print(f"  Stage 2 Flagged as Anomaly        : {flagged_anomalies} / {n_missed} ({pct_flagged:.1f}%)")
                 if pct_flagged > 0:
                     print(f"  --> SUCCESS: Stage 2 hybrid escalation caught {pct_flagged:.1f}% of Stage 1 missed attacks!")
 
-    # 6. Final ml/artifacts directory listing
-    print("\n" + "=" * 70)
-    print("Final ml/artifacts/ Directory Contents:")
-    print("=" * 70)
-    for fname in sorted(os.listdir(artifacts_dir)):
-        fpath = os.path.join(artifacts_dir, fname)
-        size_kb = os.path.getsize(fpath) / 1024.0
-        print(f"  - {fname:<30} ({size_kb:,.1f} KB)")
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()

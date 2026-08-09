@@ -172,6 +172,14 @@ export interface AuditLog {
 }
 
 export interface ModelEvaluationMetrics {
+  evaluation_scope?: string
+  dataset?: string
+  train_test_split?: string
+  total_test_samples?: number
+  benign_samples?: number
+  attack_samples?: number
+  num_attack_classes?: number
+  num_features?: number
   confusion_matrix: {
     tp: number
     tn: number
@@ -179,6 +187,7 @@ export interface ModelEvaluationMetrics {
     fn: number
     total_evaluated: number
   }
+
   metrics: {
     accuracy: number
     precision: number

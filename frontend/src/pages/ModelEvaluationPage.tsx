@@ -39,14 +39,43 @@ export default function ModelEvaluationPage() {
   return (
     <div style={styles.container}>
       <div>
-        <h2 style={styles.pageTitle}>Machine Learning Model Evaluation & Analyst Ground Truth</h2>
+        <h2 style={styles.pageTitle}>CICIDS2017 Offline Model Evaluation</h2>
         <span style={styles.pageSubtitle}>
-          Real-time confusion matrix, accuracy, precision, recall, MCC, ROC-AUC, and Stage 1 vs Stage 2 model comparison
+          Evaluated strictly on held-out test set predictions (565,576 samples containing both benign and attack flows) from the official CICIDS2017 dataset.
         </span>
+      </div>
+
+      {/* Dataset & Test Set Metadata Header Banner */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155', marginBottom: '20px' }}>
+        <div>
+          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>Dataset</span>
+          <strong style={{ fontSize: '15px', color: '#f8fafc' }}>{evalData?.dataset || 'CICIDS2017'}</strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>Train / Test Split</span>
+          <strong style={{ fontSize: '15px', color: '#f8fafc' }}>{evalData?.train_test_split || '80% Train / 20% Test'}</strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>Total Test Samples</span>
+          <strong style={{ fontSize: '15px', color: '#3b82f6' }}>{(evalData?.total_test_samples || cm.total_evaluated).toLocaleString()}</strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>Benign Test Samples</span>
+          <strong style={{ fontSize: '15px', color: '#10b981' }}>{(evalData?.benign_samples || 454265).toLocaleString()}</strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>Attack Test Samples</span>
+          <strong style={{ fontSize: '15px', color: '#ef4444' }}>{(evalData?.attack_samples || 111311).toLocaleString()}</strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>Attack Classes / Features</span>
+          <strong style={{ fontSize: '15px', color: '#a855f7' }}>{evalData?.num_attack_classes || 14} Classes / {evalData?.num_features || 76} Features</strong>
+        </div>
       </div>
 
       {/* Metrics Summary Grid */}
       <div style={styles.grid}>
+
         <div style={styles.metricCard}>
           <span style={styles.metricLabel}>Accuracy</span>
           <span style={styles.metricVal}>{(m.accuracy * 100).toFixed(2)}%</span>
