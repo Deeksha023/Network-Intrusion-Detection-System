@@ -21,6 +21,14 @@ from api.main import app
 client = TestClient(app)
 
 
+def get_auth_headers():
+    resp = client.post("/auth/login", json={"username": "admin", "password": "admin123"})
+    if resp.status_code == 200:
+        token = resp.json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+    return {}
+
+
 def test_auth_login_and_me():
     print("\n--- Testing JWT Auth & Me Endpoints ---")
     resp = client.post("/auth/login", json={"username": "admin", "password": "admin123"})
@@ -40,8 +48,9 @@ def test_auth_login_and_me():
 
 def test_threat_intel_enrichment():
     print("\n--- Testing Threat Intelligence Lookup ---")
+    headers = get_auth_headers()
     # Test Private RFC1918 IP
-    priv_resp = client.get("/threat-intel/lookup/192.168.1.100")
+    priv_resp = client.get("/threat-intel/lookup/192.168.1.100", headers=headers)
     assert priv_resp.status_code == 200
     priv_data = priv_resp.json()
     assert priv_data["is_private"] is True
@@ -49,7 +58,7 @@ def test_threat_intel_enrichment():
     print("RFC1918 Private IP correctly identified and enriched!")
 
     # Test Public IP
-    pub_resp = client.get("/threat-intel/lookup/185.220.101.5")
+    pub_resp = client.get("/threat-intel/lookup/185.220.101.5", headers=headers)
     assert pub_resp.status_code == 200
     pub_data = pub_resp.json()
     assert pub_data["is_private"] is False
@@ -60,31 +69,33 @@ def test_threat_intel_enrichment():
 
 def test_incident_response_firewall():
     print("\n--- Testing Incident Response & Firewall Blocking ---")
+    headers = get_auth_headers()
     payload = {
         "ip_address": "193.56.29.11",
         "reason": "Test Botnet C2 Firewall Rule",
         "confirmed": True,
     }
-    resp = client.post("/incident/block-ip", json=payload)
+    resp = client.post("/incident/block-ip", json=payload, headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["success"] is True
     print("OS Firewall block command generated:", data["rule"]["os_command"])
 
     # Check active rules
-    rules_resp = client.get("/incident/rules")
+    rules_resp = client.get("/incident/rules", headers=headers)
     assert rules_resp.status_code == 200
     assert "193.56.29.11" in rules_resp.json()["blacklist"]
 
 
 def test_attack_simulation_lab():
     print("\n--- Testing Security Attack Simulation Lab ---")
+    headers = get_auth_headers()
     payload = {
         "attack_type": "Port Scan",
         "packet_count": 50,
         "target_ip": "172.16.0.5",
     }
-    resp = client.post("/simulation/run", json=payload)
+    resp = client.post("/simulation/run", json=payload, headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "COMPLETED"
@@ -94,14 +105,15 @@ def test_attack_simulation_lab():
 
 def test_model_evaluation_and_comparison():
     print("\n--- Testing ML Evaluation & Model Comparison ---")
-    eval_resp = client.get("/evaluation/metrics")
+    headers = get_auth_headers()
+    eval_resp = client.get("/evaluation/metrics", headers=headers)
     assert eval_resp.status_code == 200
     eval_data = eval_resp.json()
     assert "confusion_matrix" in eval_data
     assert "accuracy" in eval_data["metrics"]
     print("Confusion Matrix metrics verified!")
 
-    comp_resp = client.get("/evaluation/comparison")
+    comp_resp = client.get("/evaluation/comparison", headers=headers)
     assert comp_resp.status_code == 200
     comp_data = comp_resp.json()
     assert "stage1_randomforest" in comp_data
@@ -111,24 +123,26 @@ def test_model_evaluation_and_comparison():
 
 def test_reports_generation_and_export():
     print("\n--- Testing Executive SOC Report Generation & Export ---")
-    gen_resp = client.post("/reports/generate", json={"report_type": "daily"})
+    headers = get_auth_headers()
+    gen_resp = client.post("/reports/generate", json={"report_type": "daily"}, headers=headers)
     assert gen_resp.status_code == 200
     gen_data = gen_resp.json()
     report_id = gen_data["report_id"]
     print(f"Report generated with ID: {report_id}")
 
     # Export JSON
-    exp_json = client.get(f"/reports/{report_id}/export?export_format=json")
+    exp_json = client.get(f"/reports/{report_id}/export?export_format=json", headers=headers)
     assert exp_json.status_code == 200
 
     # Export CSV
-    exp_csv = client.get(f"/reports/{report_id}/export?export_format=csv")
+    exp_csv = client.get(f"/reports/{report_id}/export?export_format=csv", headers=headers)
     assert exp_csv.status_code == 200
 
     # Export PDF
-    exp_pdf = client.get(f"/reports/{report_id}/export?export_format=pdf")
+    exp_pdf = client.get(f"/reports/{report_id}/export?export_format=pdf", headers=headers)
     assert exp_pdf.status_code == 200
     print("Report PDF, CSV, and JSON exports verified!")
+
 
 
 def test_advanced_analytics():

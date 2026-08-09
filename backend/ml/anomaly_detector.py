@@ -113,11 +113,11 @@ class AutoencoderDetector:
             checkpoint = torch.load(target_path, map_location=self._device)
             if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
                 model.load_state_dict(checkpoint["state_dict"])
-            elif isinstance(checkpoint, dict):
-                try:
-                    model.load_state_dict(checkpoint)
-                except Exception:
+            elif isinstance(checkpoint, (dict, torch.nn.modules.container.Sequential)) or hasattr(checkpoint, "keys"):
+                if isinstance(checkpoint, nn.Module):
                     model = checkpoint
+                else:
+                    model.load_state_dict(checkpoint)
             else:
                 model = checkpoint
 

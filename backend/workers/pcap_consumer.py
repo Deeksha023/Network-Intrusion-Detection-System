@@ -109,7 +109,7 @@ async def main() -> None:
 
     redis_url = get_redis_url()
     logger.info("Connecting PCAP worker to Redis at %s", redis_url)
-    redis = aioredis.Redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+    redis = aioredis.Redis.from_url(redis_url, encoding="utf-8", decode_responses=True, protocol=2)
 
     await _init_consumer_group(redis)
 

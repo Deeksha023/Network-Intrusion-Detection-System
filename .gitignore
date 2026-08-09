@@ -84,3 +84,7 @@ backend/data/cicids2017/
 # Keep only sample data if needed
 !data/sample*
 !backend/data/sample*
+
+# Local portable binary tools
+tools/
+

@@ -28,14 +28,24 @@ DATABASE_URL: str = os.getenv(
     "postgresql+asyncpg://postgres:Akrithi%401234@localhost:5433/NIDS",
 )
 
-# pool_pre_ping keeps the connection healthy across database restarts
-engine: AsyncEngine = create_async_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-    echo=os.getenv("LOG_LEVEL", "info").lower() == "debug",
-)
+import sys
+from sqlalchemy.pool import NullPool
+
+is_testing = "pytest" in sys.modules or os.getenv("TESTING") == "1"
+
+engine_kwargs = {
+    "echo": os.getenv("LOG_LEVEL", "info").lower() == "debug",
+}
+
+if is_testing:
+    engine_kwargs["poolclass"] = NullPool
+else:
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
+    engine_kwargs["pool_pre_ping"] = False
+
+engine: AsyncEngine = create_async_engine(DATABASE_URL, **engine_kwargs)
+
 
 # ---------------------------------------------------------------------------
 # Session factory

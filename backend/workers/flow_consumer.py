@@ -219,7 +219,7 @@ async def main() -> None:
 
     redis_url = get_redis_url()
     logger.info("Connecting to Redis at %s", redis_url)
-    redis = aioredis.Redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+    redis = aioredis.Redis.from_url(redis_url, encoding="utf-8", decode_responses=True, protocol=2)
 
     # Initialise the ML pipeline (loads model stubs; will be real once trained)
     _pipeline = DetectionPipeline()

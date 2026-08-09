@@ -31,12 +31,21 @@ def get_redis_url() -> str:
 def get_redis_pool() -> aioredis.Redis:
     """Return (or lazily initialise) the shared async Redis client."""
     global _redis_pool
-    if _redis_pool is None:
+    import asyncio
+    try:
+        current_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        current_loop = None
+
+    pool_loop = getattr(_redis_pool, "_connection_loop", None)
+    if _redis_pool is None or (current_loop and pool_loop != current_loop):
         redis_url = get_redis_url()
         _redis_pool = aioredis.Redis.from_url(
-            redis_url, encoding="utf-8", decode_responses=True
+            redis_url, encoding="utf-8", decode_responses=True, protocol=2
         )
+        _redis_pool._connection_loop = current_loop
     return _redis_pool
+
 
 
 async def get_redis() -> aioredis.Redis:

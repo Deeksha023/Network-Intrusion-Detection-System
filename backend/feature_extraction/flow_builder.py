@@ -333,8 +333,20 @@ class FlowBuilder:
                 tcp = packet[TCP]
                 src_port, dst_port = tcp.sport, tcp.dport
                 proto = "TCP"
-                flags = str(tcp.flags)
-                hdr_len = getattr(tcp, "dataofs", 5) * 4
+                fval = int(tcp.flags)
+                flag_chars = []
+                if fval & 0x01: flag_chars.append("F")
+                if fval & 0x02: flag_chars.append("S")
+                if fval & 0x04: flag_chars.append("R")
+                if fval & 0x08: flag_chars.append("P")
+                if fval & 0x10: flag_chars.append("A")
+                if fval & 0x20: flag_chars.append("U")
+                if fval & 0x40: flag_chars.append("E")
+                if fval & 0x80: flag_chars.append("C")
+                flags = "".join(flag_chars)
+                dataofs = getattr(tcp, "dataofs", None)
+                hdr_len = (int(dataofs) if dataofs is not None else 5) * 4
+
                 payload_len = len(tcp.payload) if tcp.payload else 0
                 win_size = int(getattr(tcp, "window", 0))
             elif packet.haslayer(UDP):
