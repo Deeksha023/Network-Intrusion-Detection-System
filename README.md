@@ -21,7 +21,7 @@ A production-grade, real-time Network IDS that ingests live or replayed network 
 │           ▼                                                                 │
 │  ┌──────────────────┐                                                       │
 │  │  Redis Stream    │  ids:flows   (localhost:6379)                         │
-│  │  (local service) │  ids:pcap_jobs (pcap replay jobs)                    │
+│  │  (local service) │  ids:pcap_jobs (pcap replay jobs)                     │
 │  └────────┬─────────┘                                                       │
 │           │  XREADGROUP (consumer group)                                    │
 │           ▼                                                                 │
@@ -33,17 +33,17 @@ A production-grade, real-time Network IDS that ingests live or replayed network 
 │  │                  ▼                   │                                   │
 │  │  ┌────────────────────────────────┐  │                                   │
 │  │  │  ML Pipeline (pipeline.py)     │  │                                   │
-│  │  │  Stage 1: RandomForest         │  │ → (attack_type, confidence)      │
-│  │  │  Stage 2: Autoencoder Detector │  │ → (is_anomaly, recon_error)       │
-│  │  │  SHAP Explainer                │  │ → shap_values dict               │
+│  │  │  Stage 1: RandomForest         │  │ → (attack_type, confidence)       │
+│  │  │  Stage 2: Autoencoder Detector │  │ → (is_anomaly, recon_error)        │
+│  │  │  SHAP Explainer                │  │ → shap_values dict                │
 │  │  └───────────────┬────────────────┘  │                                   │
 │  └──────────────────┼───────────────────┘                                   │
 │                     │  write Alert + FlowRecord                             │
 │                     ▼                                                       │
 │  ┌──────────────────────────────────────┐                                   │
-│  │  PostgreSQL                         │  localhost:5433 / 5432            │
+│  │  PostgreSQL                         │  localhost:5433 / 5432             │
 │  │  flow_records                        │  date_trunc() aggregations        │
-│  │  alerts                              │  JSONB: shap_values, raw_features │
+│  │  alerts                              │  JSONB: shap_values, raw_features  │
 │  │  threat_intel_cache, reports         │                                   │
 │  └──────────────────────────────────────┘                                   │
 │                     │  WebSocket broadcast                                  │
