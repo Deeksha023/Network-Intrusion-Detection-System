@@ -86,9 +86,9 @@ cp .env.example .env
 Ensure `.env` matches your local database and Redis credentials:
 ```ini
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=Akrithi@1234
+POSTGRES_PASSWORD=your_password_here
 POSTGRES_DB=NIDS
-DATABASE_URL=postgresql+asyncpg://postgres:Akrithi%401234@localhost:5433/NIDS
+DATABASE_URL=postgresql+asyncpg://postgres:your_password_here@localhost:5432/NIDS
 REDIS_URL=redis://localhost:6379/0
 ```
 
@@ -149,17 +149,18 @@ npm run dev
 | Variable | Default Value | Description |
 |---|---|---|
 | `POSTGRES_USER` | `postgres` | Local PostgreSQL username |
-| `POSTGRES_PASSWORD` | `Akrithi@1234` | Local PostgreSQL password |
+| `POSTGRES_PASSWORD` | `your_password_here` | Local PostgreSQL password |
 | `POSTGRES_DB` | `NIDS` | PostgreSQL database name |
-| `DATABASE_URL` | `postgresql+asyncpg://postgres:Akrithi%401234@localhost:5433/NIDS` | Async SQLAlchemy URL |
+| `DATABASE_URL` | `postgresql+asyncpg://postgres:your_password_here@localhost:5432/NIDS` | Async SQLAlchemy URL |
 | `REDIS_URL` | `redis://localhost:6379/0` | Local Redis connection URL |
 | `CAPTURE_MODE` | `replay` | Traffic ingestion mode (`replay` or `live`) |
 | `PCAP_PATH` | `data/sample.pcap` | PCAP file path for replay mode |
 | `CLASSIFIER_MODEL_PATH` | `ml/artifacts/classifier.joblib` | Stage 1 RandomForest model artifact |
 | `AUTOENCODER_MODEL_PATH` | `ml/artifacts/autoencoder.pt` | Stage 2 PyTorch Autoencoder artifact |
 | `STAGE1_CONFIDENCE_THRESHOLD` | `0.70` | Confidence threshold for Stage 1 |
-| `JWT_SECRET_KEY` | `ids-enterprise-soc-secret-key-2026` | JWT signature secret |
+| `JWT_SECRET_KEY` | `change_this_to_a_secure_secret_key` | JWT signature secret |
 | `LOG_LEVEL` | `info` | Logger verbosity |
+
 
 ---
 

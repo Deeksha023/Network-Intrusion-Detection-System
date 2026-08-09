@@ -10,7 +10,7 @@ sql_statements = [
 ]
 
 env = os.environ.copy()
-env['PGPASSWORD'] = 'Akrithi@1234'
+env['PGPASSWORD'] = os.environ.get('POSTGRES_PASSWORD', os.environ.get('PGPASSWORD', ''))
 
 for stmt in sql_statements:
     res = subprocess.run([psql_exe, '-U', 'postgres', '-p', '5432', '-d', 'postgres', '-c', stmt], env=env, capture_output=True, text=True)
